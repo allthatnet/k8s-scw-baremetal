@@ -31,7 +31,7 @@ resource "scaleway_server" "k8s_master" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/docker-install.sh && /tmp/docker-install.sh ${var.docker_version}",
-      "chmod +x /tmp/kubeadm-install.sh && /tmp/kubeadm-install.sh",
+     "chmod +x /tmp/kubeadm-install.sh && /tmp/kubeadm-install.sh",
       "kubeadm init --apiserver-advertise-address=${self.private_ip} --apiserver-cert-extra-sans=${self.public_ip} --kubernetes-version=${var.k8s_version} --ignore-preflight-errors=KubeletVersion",
       "mkdir -p $HOME/.kube && cp -i /etc/kubernetes/admin.conf $HOME/.kube/config",
       "kubectl create secret -n kube-system generic weave-passwd --from-literal=weave-passwd=${var.weave_passwd}",
@@ -40,7 +40,7 @@ resource "scaleway_server" "k8s_master" {
     ]
   }
   provisioner "local-exec" {
-    command    = "./scripts/kubectl-conf.sh ${terraform.workspace} ${self.public_ip} ${self.private_ip}"
+    command    = "./scripts/kubectl-conf.sh ${terraform.workspace} ${self.public_ip} ${self.private_ip} ${var.private_key}"
     on_failure = "continue"
   }
 }
@@ -49,7 +49,8 @@ data "external" "kubeadm_join" {
   program = ["./scripts/kubeadm-token.sh"]
 
   query = {
-    host = "${scaleway_ip.k8s_master_ip.0.ip}"
+    host = "${scaleway_ip.k8s_master_ip.0.ip}",
+    ssh_key = "${var.private_key}"
   }
 
   depends_on = ["scaleway_server.k8s_master"]
